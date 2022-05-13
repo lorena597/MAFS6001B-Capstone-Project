@@ -5,28 +5,42 @@ from strategy import Strategy
 from performance import PerformanceAnalysis
 from trade import Trade
 from multiprocessing import Pool
+from collections.abc import Iterable
 
-def wrapper(func, args):
-    return func(*args)
-
-def get_performance(params: list, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
-    res = getattr(strategy_, current_strategy)(*params)
-    # need to modify temp_res because exists nan
+def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
+    if isinstance(params, Iterable):
+            res = getattr(strategy_, current_strategy)(*params)
+    else:
+        res = getattr(strategy_, current_strategy)(params)
+    
     trade_ = Trade(res, transaction_bps, stoploss)
-    trade_.backtest()
-    res['portfolio_return'] = trade_.portfolio_return_hist
-    res['portfolio_value'] = trade_.portfolio_value_hist
-    performance = PerformanceAnalysis(res, tuple(params))
+    res = trade_.backtest()
+    name = current_strategy
+    performance = PerformanceAnalysis(res, name)
     return performance
 
-def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy: str, transaction_bps, stoploss):
+def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy: str):
     strategy_ = Strategy(train)
-    performance = pd.DataFrame()
-    for temp_params in wrapper(itertools.product, params_range):
-        temp_performance = get_performance(temp_params, strategy_, current_strategy, transaction_bps, stoploss)
-        performance = pd.concat([performance, temp_performance])
-    performance['rank'] = performance['Sharpe Ratio'].rank()
-    chosen_params = performance.index[performance['rank'].argmax()]
+    prediction_accuracy = []
+    params = []
+    train['true_return'] = train.close.diff()
+    true_position = np.sign(train[train['not_buffer'] == 1]['true_return'])
+
+    if len(params_range) == 1:
+        total_params = params_range[0]
+    else:
+        total_params = list(itertools.product(*params_range))
+
+    for temp_params in total_params:
+        if isinstance(temp_params, Iterable):
+            res = getattr(strategy_, current_strategy)(*temp_params)
+        else:
+            res = getattr(strategy_, current_strategy)(temp_params)
+        temp_train_position = np.array(res.position.shift().fillna(0))
+        temp_accuracy = np.mean(temp_train_position == true_position)
+        prediction_accuracy.append(temp_accuracy)
+        params.append(temp_params)
+    chosen_params = params[np.argmax(prediction_accuracy)]
     return chosen_params
 
 
