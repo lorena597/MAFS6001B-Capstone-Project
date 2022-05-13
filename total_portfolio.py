@@ -4,6 +4,7 @@ import pandas as pd
 from strategy import Strategy
 from performance import PerformanceAnalysis
 from trade import Trade
+from optimizer import *
 from multiprocessing import Pool
 from collections.abc import Iterable
 
@@ -53,27 +54,50 @@ class Total_portfolio():
         self.crypto_list = crypto_list
         self.strategy_list = [func for func in dir(Strategy) if not func.startswith('__')]
         self.rolling_return = []
+        self.rolling_crypto_returns = pd.DataFrame()
         self.params_range = params_range
         self.params = dict()
 
 
-    def get_portfolio(self, backtest_len: int, data: dict, selected_strategy: dict, params: dict, weight: dict):
-        total_return = np.zeros(backtest_len)
-        for i in range(self.crypto_list):
-            strategy_ = Strategy(data[self.crypto_list[i]])
-            temp_strategy = selected_strategy[self.crypto_list[i]]
-            temp_params = params[self.crypto_list[i]]
-            temp_weight = weight[self.crypto_list[i]]
-            for j in range(temp_strategy):
-                args = temp_params[j]
-                temp_strategy_ = getattr(strategy_, temp_strategy[j])(*args)
-                temp_res = temp_strategy_(strategy_.df)
-                # need to modify temp_res because exists nan
-                trade_ = Trade(temp_res, self.transaction_bps, self.stoploss)
-                trade_.backtest()
-                total_return += temp_weight[j] * np.array(trade_.portfolio_return_hist)
+    # use selected strategies with corresponding parameters to backtest for each cryptocurrency
+    # use selected optimizer to combine different strategies and different cryptocurrenies respectively
+    def get_portfolio(self, data: dict, selected_strategy: dict, selected_params: dict, selected_optimizer: function):
 
-        self.rolling_return = self.rolling_return.extend(list(total_return))
+        crypto_returns = pd.DataFrame()
+
+        for i in self.crypto_list:
+            current_crypto = self.crypto_list[i]
+            selected_strategy_list = selected_strategy[current_crypto]
+            if len(selected_strategy_list) == 0: continue
+            strategy_ = Strategy(data[current_crypto])
+            selected_params_list = selected_params[current_crypto]
+
+            strats_returns = pd.DataFrame()
+            
+            for j in selected_strategy_list:
+                args = selected_params_list[j]
+                if isinstance(args, Iterable):
+                    temp_res = getattr(strategy_, selected_strategy_list[j])(*args)
+                else:
+                    temp_res = getattr(strategy_, selected_strategy_list[j])(args)
+                trade_ = Trade(temp_res, self.transaction_bps, self.stoploss)
+                temp_res = trade_.backtest()
+                strats_returns[j] = temp_res.portfolio_return
+            
+            mu_s = strats_returns.mean().values.reshape((-1,1))
+            sigma_s = strats_returns.cov().values
+            weight_s = selected_optimizer(mu_s, sigma_s)
+
+            crypto_returns[current_crypto] = strats_returns.values @ weight_s
+
+        mu_c = crypto_returns.mean().values.reshape((-1,1))
+        sigma_c = crypto_returns.cov().values
+        weight_c = selected_optimizer(mu_c, sigma_c)
+
+        portfolio_returns = crypto_returns.values @ weight_c
+
+        self.rolling_return = self.rolling_return.extend(list(portfolio_returns))
+        self.rolling_crypto_returns = pd.concat([self.rolling_crypto_returns, crypto_returns])
 
     # Forward chaining is a cross validation method for time series  
     def Forward_chaining(self, params_range: dict, df: pd.DataFrame, K: int):
@@ -98,6 +122,3 @@ class Total_portfolio():
                 else:
                     performance = performance + performance_
             performance = performance/K
-        
-                
-
