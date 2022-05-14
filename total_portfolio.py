@@ -51,7 +51,6 @@ class Total_portfolio():
         self.params_range = params_range
         self.params = dict()
 
-
     # use selected strategies with corresponding parameters to backtest for each cryptocurrency
     # use selected optimizer to combine different strategies and different cryptocurrenies respectively
     def get_portfolio(self, data: dict, selected_strategy: dict, selected_params: dict, selected_optimizer: function):
@@ -69,7 +68,9 @@ class Total_portfolio():
             
             for j in selected_strategy_list:
                 args = selected_params_list[j]
-                if isinstance(args, Iterable):
+                if args == 'skip this strat!':
+                    continue
+                elif isinstance(args, Iterable):
                     temp_res = getattr(strategy_, selected_strategy_list[j])(*args)
                 else:
                     temp_res = getattr(strategy_, selected_strategy_list[j])(args)
@@ -92,26 +93,62 @@ class Total_portfolio():
         self.rolling_return = self.rolling_return.extend(list(portfolio_returns))
         self.rolling_crypto_returns = pd.concat([self.rolling_crypto_returns, crypto_returns])
 
-    # Forward chaining is a cross validation method for time series  
-    def Forward_chaining(self, params_range: dict, df: pd.DataFrame, K: int):
+  
+    def forward_chaining(self, forward_data: dict, K: int, params_range: dict):
+
+        # for forward_data, key of dict represents different crypto
+        # for params_range, key of dict represents different strats
+
+        crypto_strats_and_params = {}
+
+        for crypto in self.crypto_list:
+
+            k_list = list(np.arange(K))
+            strats_params = {}
+            strats_sr = pd.DataFrame(np.nan, index = self.strategy_list, columns = k_list)
+            
+            fwd = forward_data[crypto]
+            fwd['ix'] = np.arange(len(fwd))
+            fwd['group'] = pd.cut(fwd['ix'], K, labels = k_list)
+
+            for strats in self.strategy_list:
+
+                sr_mat = np.full((K,K),np.nan)
+                params_all = []
+                
+                for k1 in k_list:
+                    train = fwd[fwd['group'] == k1]
+                    args = [[train, params_range[strats], strats]]
+                    with Pool(4) as pool:
+                        params_k1 = pool.starmap(get_optimal_params, args)
+                    params_all.append(params_k1)
+                    for k2 in k_list:
+                        if k2 == k1: continue
+                        test = fwd[fwd['group'] == k2]
+                        performance = get_performance(params_k1, Strategy(test), strats, self.transaction_bps, self.stoploss)
+                        # ret_mat[k1,k2] = performance.iloc[0,0] 
+                        # mdd_mat[k1,k2] = performance.iloc[0,2] 
+                        sr_mat[k1,k2] = performance.iloc[0,3]
+
+                # ret_avg = np.nanmean(ret_mat, axis = 1)
+                # mdd_filter = np.any(mdd_mat <= -0.1, axis = 1)
+
+                # ret_avg[mdd_filter == True] = - np.inf
+                # if np.all(ret_avg, -np.inf):
+                #    strats_candidate[strats] = 'skip this strat!'
+
+                sr_avg = np.nanmean(sr_mat, axis = 1)
+                max_ix = np.argmax(sr_avg)
+                optimal_params = params_all[max_ix]
+                strats_params[strats] = optimal_params
+                strats_sr.loc[strats,:] = sr_mat[np.argmax(sr_avg),:]
+
+            strats_sr_avg = np.nanmean(strats_sr, axis = 1)
+            sorted_ix = np.argsort(strats_sr_avg)
+
+            selected_strats_and_params = {}
+            for ix in sorted_ix[-5:]:
+                selected_strats = self.strategy_list[ix]
+                selected_strats_and_params[selected_strats] = strats_params[selected_strats]
         
-        df['ix'] = np.arange(len(df))
-        df['group'] = pd.cut(df['ix'], K, lables = list(np.arange(K)))
-        chosen_strategy = []
-        for i in range(len(self.crypto_list)):
-            performance = pd.DataFrame()
-            for k in range(1, K):
-                train = df[df['group'] < k]
-                test = df[df['group'] == k]
-                args = [[train, self.params_range[temp_strat], temp_strat, self.transaction_bps, self.stoploss] for temp_strat in self.strategy_list]
-                with Pool(4) as pool:
-                    chosen_params = pool.starmap(get_optimal_params, args)
-                performance_ = pd.DataFrame()
-                for j in range(len(chosen_params)):
-                    temp_performance_ = get_performance(chosen_params[j], Strategy(test), self.strategy_list[j], self.transaction_bps, self.stoploss)
-                    performance_ = pd.concat([performance_, temp_performance_])
-                if len(performance) == 0:
-                    performance = performance_
-                else:
-                    performance = performance + performance_
-            performance = performance/K
+            crypto_strats_and_params[crypto] = selected_strats_and_params
