@@ -8,7 +8,7 @@ from optimizer import *
 from multiprocessing import Pool
 from collections.abc import Iterable
 
-def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
+def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int, get_param_perf = False):
     if isinstance(params, Iterable):
             res = getattr(strategy_, current_strategy)(*params)
     else:
@@ -16,34 +16,27 @@ def get_performance(params, strategy_: Strategy, current_strategy: str, transact
     
     trade_ = Trade(res, transaction_bps, stoploss)
     res = trade_.backtest()
-    name = current_strategy
-    performance = PerformanceAnalysis(res, name)
+    if get_param_perf:
+        name = params
+    else:
+        name = current_strategy
+    performance = PerformanceAnalysis(res, name, trade_.winrate)
     return performance
 
-def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy: str):
+def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy: str, bps: int, stoploss: int):
     strategy_ = Strategy(train)
-    prediction_accuracy = []
-    params = []
-    train['true_return'] = train.close.diff()
-    true_position = np.sign(train[train['not_buffer'] == 1]['true_return'])
-
+    performance = pd.DataFrame()
     if len(params_range) == 1:
         total_params = params_range[0]
     else:
         total_params = list(itertools.product(*params_range))
 
     for temp_params in total_params:
-        if isinstance(temp_params, Iterable):
-            res = getattr(strategy_, current_strategy)(*temp_params)
-        else:
-            res = getattr(strategy_, current_strategy)(temp_params)
-        temp_train_position = np.array(res.position.shift().fillna(0))
-        temp_accuracy = np.mean(temp_train_position == true_position)
-        prediction_accuracy.append(temp_accuracy)
-        params.append(temp_params)
-    chosen_params = params[np.argmax(prediction_accuracy)]
+        temp_performance = get_performance(temp_params, strategy_, current_strategy, bps, stoploss, get_param_perf = True)
+        performance = pd.concat([performance, temp_performance])
+    performance['rank'] = performance['Sharpe Ratio'].rank()
+    chosen_params = performance.index[performance['rank'].argmax()]
     return chosen_params
-
 
 class Total_portfolio():
 
