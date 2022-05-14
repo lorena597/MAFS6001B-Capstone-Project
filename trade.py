@@ -12,6 +12,9 @@ class Trade(object):
         self.transaction_perc = bps * 0.0001 # transaction cost
         self.stoploss = stoploss # stop loss
         self.position = 0
+        self.winrate = 0
+        self.trade_num = 0
+        self.win_trade_num = 0
         self.portfolio_return = 0
         self.start_trade_value = 0
         self.portfolio_value = 1
@@ -50,6 +53,9 @@ class Trade(object):
         transaction_cost = - self.transaction_perc * abs(self.position - temp_position)
         self.portfolio_return += transaction_cost
         self.position = temp_position
+        self.trade_num += 1
+        if self.portfolio_value > self.start_trade_value:
+            self.win_trade_num += 1
         self.start_trade_value = 0
 
     def stop_loss(self, i: int):
@@ -79,7 +85,7 @@ class Trade(object):
         
         self.res['portfolio_return'] = self.portfolio_return_hist
         self.res['portfolio_value'] = self.portfolio_value_hist
-
+        self.winrate = self.win_trade_num/self.trade_num*100
         return self.res
         
 
