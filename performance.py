@@ -3,12 +3,13 @@ import pandas as pd
 
 class PerformanceAnalysis(object): 
     
-    def __init__(self, df: pd.DataFrame, name: str):
+    def __init__(self, df: pd.DataFrame, name: str, winrate: float):
         
         self.df = df
         self.name = name
         self.pnl = self.df.portfolio_value
         self.ret = self.df.portfolio_return
+        self.winrate = winrate
 
     @property
     def ann_ret(self):
@@ -45,5 +46,5 @@ class PerformanceAnalysis(object):
     
     def describe(self):
         dic = {'Annual Ret': self.ann_ret, 'Annual Vol': self.ann_vol, 'Max Drawdown': self.maxdrawdown, 
-                'Sharpe Ratio': self.sharpe, 'Calmar Ratio': self.calmar, 'VaR 95%': self.VaR}
+                'Sharpe Ratio': self.sharpe, 'Calmar Ratio': self.calmar, 'VaR 95%': self.VaR, 'Winrate': self.winrate}
         return pd.DataFrame(dic, index = [self.name])
