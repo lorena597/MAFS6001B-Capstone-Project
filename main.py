@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from strategy import Strategy
 from trade import Trade
 from performance import PerformanceAnalysis
+from total_portfolio import *
 
 '''Data Preparation'''
 
@@ -19,15 +20,13 @@ df.columns = cols
 df["open time"] = df["open time"] // 1000
 df.index = [datetime.datetime.utcfromtimestamp(df["open time"][i]) for i in range(len(df))]
 
-'''Example'''
-
-train = df[("2021-07-01 00:00:00" <= df.index) & (df.index <= "2022-01-01 00:00:00")]
-test = df[("2022-01-01 00:00:00" < df.index) & (df.index <= "2022-03-01 00:00:00")]
-start_date = train.index[0]
-end_date = train.index[-1]
-
-strats = Strategy(df, start_date, end_date, 200)
-res = Trade(strats.RSI(40), 15, 10).backtest()
-performance = PerformanceAnalysis(res, 'NAME').describe()
-
-print('end')
+# 不同coin的df的index应该是一致的不然可能会对后面有影响
+# 如果不一样就index取交集处理一下
+crypto_dict = {'A': df, "B": df}
+strategy_list = ['POS','WMA','VR','OBV','RSI']
+ls = [24,48]
+params_range = {'POS': ls, 'WMA': ls, 'OBV': ls, 'VR': ls, 'RSI': ls}
+selected_optimizer = [IVP, EWP]
+port = Total_portfolio(15, 10, crypto_dict, strategy_list, params_range, selected_optimizer)
+res_dict = port.get_portfolio()
+print('end!')

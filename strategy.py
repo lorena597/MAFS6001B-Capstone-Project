@@ -1,67 +1,60 @@
 from turtle import reset
 import numpy as np
 import pandas as pd
+from sympy import N
 # import talib
 
 class Strategy(object):
     
-    def __init__(self, data: pd.DataFrame, start_date: None, end_date: None, window_buffer: int):
-        
-        self.data = data
-        bgn_ix = list(data.index).index(start_date) - window_buffer
-        end_ix = list(data.index).index(end_date)
-        self.df = self.data.iloc[bgn_ix: end_ix]
-        self.start_date = start_date
-        self.end_date = end_date
-
-    def reserve(self, res: pd.DataFrame) -> pd.DataFrame:
-        return res[self.start_date: self.end_date]
+    def __init__(self, df: pd.DataFrame):
+        self.df = df
+    
+    def init_res(self):
+        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position", "entry_signal","exit_signal","not_buffer"])
+        res.close = self.df.close
+        res.not_buffer = self.df.not_buffer
+        return res
 
     def calculate_signal(self, res: pd.DataFrame) -> pd.DataFrame:
         raw_signal = res.position.diff()
-        entry_long = (raw_signal > 0) * (res.position == 1).astype(int)
-        entry_short = (raw_signal < 0) * (res.position == -1).astype(int)
-        exit_signal = (raw_signal != 0) * (res.position == 0).astype(int)
+        entry_long = (raw_signal > 0)*(res.position == 1).astype(int)
+        entry_short = (raw_signal < 0)*(res.position == -1).astype(int)
+        exit_signal = (raw_signal != 0)*(res.position == 0).astype(int)
         res.entry_signal = entry_long - entry_short
         res.exit_signal = exit_signal
-        res.fillna(method = 'ffill', inplace = True)
-        return self.reserve(res)
+        res = res[res['not_buffer'] == 1]
+        return res
 
     def crossover(self, short: int, long: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         res.indicator = self.df.close.rolling(short).mean() - self.df.close.rolling(long).mean()
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
     
     def channelbreakout(self, window: int, threshold: float) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         res.indicator = (self.df.close - self.df.close.rolling(window).mean()) / self.df.close.rolling(window).std()
         res.position = np.sign(res.indicator) * (abs(res.indicator) > threshold)
-        res = self.calculate_signal(res)     
-        return self.reserve(res)
+        res = self.calculate_signal(res)    
+        return res
     
     def POS(self, window: int) -> pd.DataFrame:
-        
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         
         H = self.df.high.rolling(window).max().values
         L = self.df.low.rolling(window).min().values
         
-        res.indicator = (res.close - L) / (H - L) * 100
+        res.indicator = (res.close - L) / (H - L)*100
         long = (res.indicator > 80).astype(int)
         short = (res.indicator < 20).astype(int)
         res.position = long - short
         res = self.calculate_signal(res)
         
-        return self.reserve(res)
+        return res
             
     def RSI(self, window: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         
         change = self.df.close - self.df.close.shift()
         abs_sum = abs(change).rolling(window).sum()
@@ -74,11 +67,10 @@ class Strategy(object):
         res.position = long - short
         res = self.calculate_signal(res)
 
-        return self.reserve(res)
+        return res
     
     def OBV(self, window: int):
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         
         sign = np.sign(self.df.close - self.df.close.shift())
         OBV = np.cumsum(self.df.volume * sign)
@@ -88,11 +80,10 @@ class Strategy(object):
         res.position = long - short
         res = self.calculate_signal(res)
 
-        return self.reserve(res)
+        return res
     
     def VR(self, window: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
         
         sign = np.sign(self.df.close - self.df.close.shift())
         
@@ -113,17 +104,16 @@ class Strategy(object):
         short = MAVR > 150
         res.position = long.astype(int) - short.astype(int)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
     
     def ADX(self, window: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         adx = talib(self.high, self.low, self.close, timeperiod = window)
         res.indicator = talib.DX(self.high, self.low, self.close, timeperiod = window)
         res.position = np.sign(res.indicator)*(adx > 50)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
     
     def smooth(self, series: pd.Series, window: int) -> pd.Series:
         series.fillna(method = "ffill", inplace = True)
@@ -137,8 +127,7 @@ class Strategy(object):
     # indicator from Colin's report
     def EFMOM(self, short: int, long: int) -> pd.DataFrame:
 
-        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         rs = self.df.close / self.df.close.shift(short) - 1
         rl = self.df.close / self.df.close.shift(long) - 1
@@ -149,13 +138,12 @@ class Strategy(object):
         res.inidcator = rs / ss - rl / sl
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
     # indicator from Colin's report
     def REG(self, window: int) -> pd.DataFrame:
 
-        res = pd.DataFrame(index = self.df.index, columns = ["close","indicator","position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         X = np.ones((window, 2))
         X[:, 1] = np.arange(window) + 1
@@ -174,12 +162,11 @@ class Strategy(object):
         short = res.indicator < -0.05
         res.position = long.astype(int) - short.astype(int)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
     def SPMOM(self, short: int, long: int) -> pd.DataFrame:
 
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         ret = res.close.pct_change()
         sp_short = ret.rolling(short).mean() / ret.rolling(short).std()
@@ -188,13 +175,12 @@ class Strategy(object):
         res.indicator = sp_short - sp_long
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
     
     # indicator from Colin's report
     def INVVOL(self, short: int, long: int) -> pd.DataFrame:
 
-        res = pd.DataFrame(index = self.df.index, columns = ["close", "indicator", "position","entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         ret = res.close.pct_change()
         siv = 1 / ret.rolling(short).std()
@@ -202,22 +188,20 @@ class Strategy(object):
         res.indicator = siv - liv
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
     def WMA(self, window: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close" , "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         weight = np.array(list(reversed(range(1, window + 1))))/(window * (window + 1)/2)
         res.indicator = res.close.rolling(window).apply(lambda x: weight.dot(x))
         res.position = (res.close > res.indicator).astype(int)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
     # indicator from Colin's report
     def DBCD(self, window1: int, window2: int, window3: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close" , "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         bias = (res.close - res.close.rolling(window1).mean())/res.close.rolling(window1).mean()*100
         res.indicator = self.smooth(bias.diff(window2), window3)
@@ -225,18 +209,17 @@ class Strategy(object):
         short = (res.indicator < -0.05).astype(int)
         res.position = long - short
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
     # indicator from Talib considering volume
     def ADOSC(self, fastperiod: int, slowperiod: int) -> pd.DataFrame:
-        res = pd.DataFrame(index = self.df.index, columns = ["close" , "indicator", "position", "entry_signal","exit_signal"])
-        res.close = self.df.close
+        res = self.init_res()
 
         adosc = talib.ADOSC(self.df.high, self.df.low, self.df.close, self.df.volume, fastperiod = fastperiod, slowperiod = slowperiod)
         res.indicator = adosc
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
-        return self.reserve(res)
+        return res
 
 
 
