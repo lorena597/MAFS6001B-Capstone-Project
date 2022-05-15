@@ -172,8 +172,8 @@ class Total_portfolio():
                 temp_df['not_buffer'] = 1
                 temp_df['not_buffer'].iloc[0:buffer_period] = 0
                 trade_data_dict[k] = temp_df
-            for i in range(len(self.selected_optimizer)):
-                self.combine(trade_data_dict, crypto_strats_and_params, i)
+            for optimizer_ix in range(len(self.selected_optimizer)):
+                self.combine(trade_data_dict, crypto_strats_and_params, optimizer_ix)
             print(f'{i} have finished!')
         return self.portfolio_return_dict
             
