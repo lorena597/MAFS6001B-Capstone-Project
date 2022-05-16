@@ -24,7 +24,11 @@ class PerformanceAnalysis(object):
     @property
     def sharpe(self):
         '''sharpe ratio'''
-        return self.ann_ret / self.ann_vol
+        if self.ann_vol != 0:
+            sharpe = self.ann_ret / self.ann_vol
+        else:
+            sharpe = np.nan
+        return sharpe
         
     @property
     def maxdrawdown(self):
@@ -37,7 +41,11 @@ class PerformanceAnalysis(object):
     @property
     def calmar(self):
         '''calmar ratio'''
-        return self.ann_ret / abs(self.maxdrawdown)
+        if self.maxdrawdown != 0:
+            calma = self.ann_ret / abs(self.maxdrawdown)
+        else:
+            calma = np.nan
+        return calma
     
     @property
     def VaR(self):
