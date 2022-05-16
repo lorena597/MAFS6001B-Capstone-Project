@@ -222,6 +222,54 @@ class Strategy(object):
         res = self.calculate_signal(res)
         return res
 
+    def FR(self, window: int) -> pd.DataFrame:
+        res = self.init_res()
+
+        res.indicator = self.df.funding_rates.rolling(window).mean()
+        res.position = np.sign(-res.indicator)
+        res = self.calculate_signal(res)
+
+        return res
+
+    def RHODL(self, window: int) -> pd.DataFrame:
+        res = self.init_res()
+
+        res.indicator = self.df.rhodl_ratio - self.df.rhodl_ratio.rolling(window).mean()
+        res.position = np.sign(-res.indicator)
+        res = self.calculate_signal(res)
+        return res
+
+    def CVDD(self, short:int, long:int) -> pd.Dataframe:
+        res = self.init_res()
+
+        res.indicator = self.df.cvdd.rolling(short).mean() - self.df.cvdd.rolling(long).mean()
+        res.position = np.sign(res.indicator)
+        res = self.calculate_signal(res)
+        return res
+
+    def NVTS(self, window:int) -> pd.Dataframe:
+        res = self.init_res()
+
+        res.indicator = self.df.nvts - self.df.nvts.rolling(window).mean()
+        res.position = np.sign(res.indicator)
+        res = self.calculate_signal(res)
+        return res
+
+    def RUP(self, window:int) -> pd.DataFrame:
+        res = self.init_res()
+
+        res.indicator = self.df.unrealized_profit - self.df.unrealized_profit.rolling(window).mean()
+        res.position = np.sign(res.indicator)
+        res = self.calculate_signal(res)
+        return res
+
+    def SSRO(self, window:int) -> pd.DataFrame:
+        res = self.init_res()
+
+        res.indicator = self.df.ssr_oscillator - self.df.ssr_oscillator.rolling(window).mean()
+        res.position = np.sign(res.indicator)
+        res = self.calculate_signal(res)
+        return res
 
 
 
