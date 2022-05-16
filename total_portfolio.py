@@ -13,7 +13,7 @@ from retrieve_data import *
 
 def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
     if isinstance(params, Iterable):
-        res = getattr(strategy_, current_strategy)(*params)
+        res = getattr(strategy_, current_strategy)(*params[0])
     else:
         res = getattr(strategy_, current_strategy)(params)
     trade_ = Trade(res, transaction_bps, stoploss)
