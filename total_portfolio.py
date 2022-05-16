@@ -13,7 +13,7 @@ from retrieve_data import *
 
 def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
     if isinstance(params, Iterable):
-        res = getattr(strategy_, current_strategy)(*params[0])
+        res = getattr(strategy_, current_strategy)(*params)
     else:
         res = getattr(strategy_, current_strategy)(params)
     trade_ = Trade(res, transaction_bps, stoploss)
@@ -26,10 +26,10 @@ def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy
     strategy_ = Strategy(train)
     performance = pd.DataFrame()
     if len(params_range) == 0: return None
-    if isinstance(params_range, Iterable):
-        total_params = list(itertools.product(params_range))
-    else:
+    if isinstance(params_range[0], Iterable):
         total_params = list(itertools.product(*params_range))
+    else:
+        total_params = list(itertools.product(params_range))
 
     for temp_params in total_params:
         temp_performance = get_performance(temp_params, strategy_, current_strategy, bps, stoploss)
