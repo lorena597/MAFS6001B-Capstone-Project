@@ -136,7 +136,7 @@ class Strategy(object):
         ss = abs(pc).rolling(short).sum()
         sl = abs(pc).rolling(long).sum()
         
-        res.inidcator = rs / ss - rl / sl
+        res.indicator = rs / ss - rl / sl
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
         return res
