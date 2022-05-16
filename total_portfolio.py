@@ -109,8 +109,8 @@ class Total_portfolio():
             data_ = forward_data[crypto]
             fwd = data_[data_['not_buffer'] == 1]
             buffer = data_[data_['not_buffer'] == 0]
-            fwd['ix'] = np.arange(len(fwd))
-            fwd['group'] = pd.cut(fwd['ix'], K, labels = k_list)
+            fwd.loc[:,'ix'] = np.arange(len(fwd))
+            fwd.loc[:,'group'] = pd.cut(fwd['ix'], K, labels = k_list)
 
             for strats in self.strategy_list:
 
@@ -153,13 +153,16 @@ class Total_portfolio():
         
     def get_portfolio(self, total_data: dict):
             rebalance_times = sorted(list(total_data.keys()))
+            
             for i in range(len(rebalance_times)):
+                print(rebalance_times[i])
                 crypto_dict = total_data[rebalance_times[i]]
                 forward_data_dict = {}
                 self.crypto_list = list(crypto_dict.keys())
                 for k in crypto_dict.keys():
+                    print(k)
                     temp_df = crypto_dict[k]
-                    temp_df = temp_df[temp_df.index <= rebalance_times[i]]
+                    temp_df = temp_df[temp_df.index <= rebalance_times[i]].copy()
                     temp_df.loc[:,'not_buffer'] = 1
                     temp_df['not_buffer'].iloc[:self.buffer_period] = 0
                     forward_data_dict[k] = temp_df
@@ -170,7 +173,7 @@ class Total_portfolio():
                     temp_start = datetime.strptime(rebalance_times[i], '%Y-%m-%d %H:%M:%S')
                     temp_start = temp_start - timedelta(hours = self.buffer_period)
                     temp_start = temp_start.strftime('%Y-%m-%d %H:%M:%S')
-                    temp_df = temp_[temp_.index >= temp_start]
+                    temp_df = temp_[temp_.index >= temp_start].copy()
                     temp_df.loc[:,'not_buffer'] = 1
                     temp_df['not_buffer'].iloc[0:self.buffer_period] = 0
                     trade_data_dict[k] = temp_df
