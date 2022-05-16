@@ -40,12 +40,12 @@ def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy
 
 class Total_portfolio():
 
-    def __init__(self, bps: int, stoploss: int, strategy_list: list, params_range: list, selected_optimizer: list):
+    def __init__(self, bps: int, stoploss: int, strategy_list: list, params_range_dict: dict, selected_optimizer: list):
         
         self.transaction_bps = bps
         self.stoploss = stoploss 
         self.strategy_list = strategy_list
-        self.params_range = params_range
+        self.params_range_dict = params_range_dict
         self.selected_optimizer = selected_optimizer
         self.portfolio_return_dict = {}
         for i in range(len(self.selected_optimizer)):
@@ -122,7 +122,7 @@ class Total_portfolio():
                     train_buffer = fwd[fwd['group'] < k1].copy()
                     train_buffer.loc[:,'not_buffer'] = 0
                     train = pd.concat([buffer, train_buffer, train])
-                    args = [train, self.params_range[strats], strats, self.transaction_bps, self.stoploss]
+                    args = [train, self.params_range_dict[strats], strats, self.transaction_bps, self.stoploss]
                     params_k1 = get_optimal_params(*args)
                     params_all.append(params_k1)
                     for k2 in k_list:
