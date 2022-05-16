@@ -13,7 +13,7 @@ from retrieve_data import *
 
 def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
     if isinstance(params, Iterable):
-        res = getattr(strategy_, current_strategy)(*params[0])
+        res = getattr(strategy_, current_strategy)(*params)
     else:
         res = getattr(strategy_, current_strategy)(params)
     trade_ = Trade(res, transaction_bps, stoploss)
@@ -155,20 +155,24 @@ class Total_portfolio():
             rebalance_times = sorted(list(total_data.keys()))
             
             for i in range(len(rebalance_times)):
-                print(rebalance_times[i])
+                
                 crypto_dict = total_data[rebalance_times[i]]
                 forward_data_dict = {}
-                self.crypto_list = list(crypto_dict.keys())
+                temp_crypto_list = []
                 for k in crypto_dict.keys():
-                    print(k)
                     temp_df = crypto_dict[k]
-                    temp_df = temp_df[temp_df.index <= rebalance_times[i]].copy()
-                    temp_df.loc[:,'not_buffer'] = 1
-                    temp_df['not_buffer'].iloc[:self.buffer_period] = 0
-                    forward_data_dict[k] = temp_df
+                    try:
+                        temp_df = temp_df[temp_df.index <= rebalance_times[i]].copy()
+                        temp_df.loc[:,'not_buffer'] = 1
+                        temp_df['not_buffer'].iloc[:self.buffer_period] = 0
+                        forward_data_dict[k] = temp_df
+                        temp_crypto_list.append(k)
+                    except:
+                        continue
+                self.crypto_list = temp_crypto_list
                 crypto_strats_and_params = self.forward(forward_data_dict, 6)
                 trade_data_dict = {}
-                for k in crypto_dict.keys():
+                for k in temp_crypto_list:
                     temp_ = crypto_dict[k]
                     temp_start = datetime.strptime(rebalance_times[i], '%Y-%m-%d %H:%M:%S')
                     temp_start = temp_start - timedelta(hours = self.buffer_period)
