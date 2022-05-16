@@ -54,7 +54,7 @@ class Strategy(object):
         
         return res
             
-    def RSI(self, window: int) -> pd.DataFrame:
+    def RSI(self, window: int, benchmark_percent: int) -> pd.DataFrame:
         res = self.init_res()
         
         change = self.df.close - self.df.close.shift()
@@ -63,8 +63,8 @@ class Strategy(object):
         up_sum = change.rolling(window).sum()
         res.indicator = up_sum / abs_sum * 100
         
-        long = (res.indicator < 30).values.astype(int)
-        short = (res.indicator > 70).values.astype(int)
+        long = (res.indicator < benchmark_percent).values.astype(int)
+        short = (res.indicator > 100-benchmark_percent).values.astype(int)
         res.position = long - short
         res = self.calculate_signal(res)
 
@@ -107,12 +107,12 @@ class Strategy(object):
         res = self.calculate_signal(res)
         return res
     
-    def ADX(self, window: int) -> pd.DataFrame:
+    def ADX(self, window: int, benchmark_percent: int) -> pd.DataFrame:
         res = self.init_res()
 
         adx = talib(self.high, self.low, self.close, timeperiod = window)
         res.indicator = talib.DX(self.high, self.low, self.close, timeperiod = window)
-        res.position = np.sign(res.indicator)*(adx > 50)
+        res.position = np.sign(res.indicator)*(adx > benchmark_percent)
         res = self.calculate_signal(res)
         return res
     
