@@ -7,13 +7,15 @@ from trade import Trade
 from optimizer import *
 from multiprocessing import Pool
 from collections.abc import Iterable
+import pickle
+from datetime import datetime, timedelta
+from retrieve_data import *
 
 def get_performance(params, strategy_: Strategy, current_strategy: str, transaction_bps: int, stoploss: int):
     if isinstance(params, Iterable):
         res = getattr(strategy_, current_strategy)(*params)
     else:
         res = getattr(strategy_, current_strategy)(params)
-    
     trade_ = Trade(res, transaction_bps, stoploss)
     res = trade_.backtest()
     name = params
@@ -38,18 +40,21 @@ def get_optimal_params(train: pd.DataFrame, params_range: list, current_strategy
 
 class Total_portfolio():
 
-    def __init__(self, bps: int, stoploss: int, crypto_dict: dict, strategy_list: list, params_range: list, selected_optimizer: list):
+    def __init__(self, bps: int, stoploss: int, strategy_list: list, params_range: list, selected_optimizer: list):
         
         self.transaction_bps = bps
-        self.stoploss = stoploss
-        self.crypto_dict = crypto_dict 
+        self.stoploss = stoploss 
         self.strategy_list = strategy_list
         self.params_range = params_range
         self.selected_optimizer = selected_optimizer
         self.portfolio_return_dict = {}
         for i in range(len(self.selected_optimizer)):
             self.portfolio_return_dict[i] = []
-
+        self.buffer_period = 10 * 24 
+        self.train_period = 6 * 30 * 24
+        self.trade_period = 2 * 30 * 24
+        self.crypto_list = []
+    
     def combine(self, trade_data_dict: dict, crypto_strats_and_params, optimizer_ix):
 
         selected_optimizer = self.selected_optimizer[optimizer_ix]
@@ -92,7 +97,7 @@ class Total_portfolio():
         # save selected strats and params for each crypto currency
         # key 1: crypto; key2: strats; value: params
 
-        for crypto in self.crypto_dict.keys():
+        for crypto in self.crypto_list:
 
             k_list = list(np.arange(K))
             strats_params = {}
@@ -101,7 +106,9 @@ class Total_portfolio():
             # save sharpe ratio in each sub period for each strats with optimal params
             
             # spilt fwd to k folders
-            fwd = forward_data[crypto]
+            data_ = forward_data[crypto]
+            fwd = data_[data_['not_buffer'] == 1]
+            buffer = data_[data_['not_buffer'] == 0]
             fwd['ix'] = np.arange(len(fwd))
             fwd['group'] = pd.cut(fwd['ix'], K, labels = k_list)
 
@@ -112,12 +119,18 @@ class Total_portfolio():
                 
                 for k1 in k_list:
                     train = fwd[fwd['group'] == k1]
+                    train_buffer = fwd[fwd['group'] < k1].copy()
+                    train_buffer.loc[:,'not_buffer'] = 0
+                    train = pd.concat([buffer, train_buffer, train])
                     args = [train, self.params_range[strats], strats, self.transaction_bps, self.stoploss]
                     params_k1 = get_optimal_params(*args)
                     params_all.append(params_k1)
                     for k2 in k_list:
                         if k2 == k1: continue
                         test = fwd[fwd['group'] == k2]
+                        test_buffer = fwd[fwd['group'] < k2].copy()
+                        test_buffer.loc[:,'not_buffer'] = 0
+                        test = pd.concat([buffer, test_buffer, test])
                         performance = get_performance(params_k1, Strategy(test), strats, self.transaction_bps, self.stoploss)
                         sr_mat[k1,k2] = performance.describe().iloc[0,3]
 
@@ -138,45 +151,30 @@ class Total_portfolio():
             crypto_strats_and_params[crypto] = selected_strats_and_params
         return crypto_strats_and_params
         
-    def get_portfolio(self):
-
-        buffer_period = 10 * 24 
-        train_period = 6 * 30 * 24
-        trade_period = 2 * 30 * 24 
-
-        dts = list(self.crypto_dict.values())[0].index 
-
-        buffer_start_date_list = [i for i in range(0, len(dts), trade_period)]
-        train_start_date_list = [i for i in range(buffer_period, len(dts), trade_period)]
-        trade_start_date_list = [i for i in range(buffer_period+train_period, len(dts), trade_period)]
-
-        rebalance_times = min(len(buffer_start_date_list), len(train_start_date_list), len(trade_start_date_list))
-        buffer_start_date_list = buffer_start_date_list[:rebalance_times]
-        train_start_date_list = train_start_date_list[:rebalance_times]
-        trade_start_date_list = trade_start_date_list[:rebalance_times]
-
-        for i in range(rebalance_times):
-            forward_data_dict = {}
-            for k in self.crypto_dict.keys():
-                temp_df = self.crypto_dict[k].iloc[buffer_start_date_list[i]:trade_start_date_list[i],:]
-                temp_df['not_buffer'] = 1
-                temp_df['not_buffer'].iloc[buffer_start_date_list[i]:train_start_date_list[i]] = 0
-                forward_data_dict[k] = temp_df
-            crypto_strats_and_params = self.forward(forward_data_dict, 6)
-            trade_data_dict = {}
-            for k in self.crypto_dict.keys():
-                if trade_start_date_list[i] + trade_period >= len(dts):
-                    temp_df = self.crypto_dict[k].iloc[trade_start_date_list[i]-buffer_period:]
-                else:
-                    temp_df = self.crypto_dict[k].iloc[trade_start_date_list[i]-buffer_period:trade_start_date_list[i]+train_period]
-                temp_df['not_buffer'] = 1
-                temp_df['not_buffer'].iloc[0:buffer_period] = 0
-                trade_data_dict[k] = temp_df
-            for optimizer_ix in range(len(self.selected_optimizer)):
-                self.combine(trade_data_dict, crypto_strats_and_params, optimizer_ix)
-            print(f'{i} have finished!')
-        return self.portfolio_return_dict
-            
-            
-
-            
+    def get_portfolio(self, total_data: dict):
+            rebalance_times = sorted(list(total_data.keys()))
+            for i in range(len(rebalance_times)):
+                crypto_dict = total_data[rebalance_times[i]]
+                forward_data_dict = {}
+                self.crypto_list = list(crypto_dict.keys())
+                for k in crypto_dict.keys():
+                    temp_df = crypto_dict[k]
+                    temp_df = temp_df[temp_df.index <= rebalance_times[i]]
+                    temp_df.loc[:,'not_buffer'] = 1
+                    temp_df['not_buffer'].iloc[:self.buffer_period] = 0
+                    forward_data_dict[k] = temp_df
+                crypto_strats_and_params = self.forward(forward_data_dict, 6)
+                trade_data_dict = {}
+                for k in crypto_dict.keys():
+                    temp_ = crypto_dict[k]
+                    temp_start = datetime.strptime(rebalance_times[i], '%Y-%m-%d %H:%M:%S')
+                    temp_start = temp_start - timedelta(hours = self.buffer_period)
+                    temp_start = temp_start.strftime('%Y-%m-%d %H:%M:%S')
+                    temp_df = temp_[temp_.index >= temp_start]
+                    temp_df.loc[:,'not_buffer'] = 1
+                    temp_df['not_buffer'].iloc[0:self.buffer_period] = 0
+                    trade_data_dict[k] = temp_df
+                for optimizer_ix in range(len(self.selected_optimizer)):
+                    self.combine(trade_data_dict, crypto_strats_and_params, optimizer_ix)
+                print(f'{i} have finished!')
+            return self.portfolio_return_dict
