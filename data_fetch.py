@@ -1,4 +1,3 @@
-import itertools
 import numpy as np
 import pandas as pd
 import pickle
@@ -29,9 +28,6 @@ def generate_coin_list():
     with open('coin_list','wb') as file:
         pickle.dump(cryptolist, file)
 
-
-
-
 # print(coin_dict)
 
 def update_coin_list(backtest_time, trade_period, coin_dict):
@@ -60,6 +56,8 @@ def fetch_data(coin_dict, buffer_period, train_period, trade_period):
         start_time = start_date_.timestamp()
 
         end_date_ = start_trade_date_ + timedelta(hours = (trade_period))
+        if end_date_ > datetime.now():
+            end_date_ = datetime.now()
         end_time = end_date_.timestamp()
         temp_coin_list = coin_dict[start_trade_date]
         temp_total_data = dict()
