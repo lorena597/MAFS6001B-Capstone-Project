@@ -42,7 +42,7 @@ def get_candlesticks(
         end_time = min(t['time'] for t in result)//1000
 
     df = pd.DataFrame(results)
-    df['time'] = pd.to_datetime(df['startTime']).dt.tz_convert("Asia/Hong_Kong")
+    df['time'] = pd.to_datetime(df['startTime']).dt.tz_convert("Asia/Hong_Kong").dt.strftime('%Y-%m-%d %H:%M:%S')
     df = (df.drop_duplicates(subset='time', keep='last')
           .set_index('time')
           .sort_index()
@@ -75,7 +75,7 @@ def get_funding_rates(
 
     df = pd.DataFrame(results)
     df['rate'] = df['rate'].apply(float)
-    df['time'] = pd.to_datetime(df['time']).dt.tz_convert("Asia/Hong_Kong")
+    df['time'] = pd.to_datetime(df['time']).dt.tz_convert("Asia/Hong_Kong").dt.strftime('%Y-%m-%d %H:%M:%S')
     df = (df.drop_duplicates(subset='time', keep='last')
           .set_index('time')
           .sort_index()
