@@ -23,6 +23,7 @@ class Strategy(object):
         res.entry_signal = entry_long - entry_short
         res.exit_signal = exit_signal
         res = res[res['not_buffer'] == 1]
+        res.reset_index(inplace = True, drop = True)
         return res
 
     def crossover(self, short: int, long: int) -> pd.DataFrame:
