@@ -64,21 +64,25 @@ def fetch_data(coin_dict, buffer_period, train_period, trade_period, onchain_met
         temp_total_data = dict()
         print(start_time)
         on_chain_data = retrieve_onchain_data(onchain_metrics_list, int(start_time), int(end_time))
+        
         for i in range(len(temp_coin_list)):
             print(temp_coin_list[i])
             try:
                 temp_data = Future(temp_coin_list[i], resolution=3600).get_candlesticks(start_time, end_time)
-                
-                temp_data = temp_data.merge(on_chain_data, how = 'left', right_index = True, left_index = True)
+                fundingrate = Future(temp_coin_list[i], resolution=3600).get_funding_rates(start_time, end_time)
+                print(fundingrate)
+                temp_data['funding_rates'] = fundingrate
                 print(temp_data)
+                temp_data = temp_data.merge(on_chain_data, how = 'left', right_index = True, left_index = True)
+                
                 temp_total_data[temp_coin_list[i]] = temp_data
             except:
                 print('error!')
             
             
-    #     total_data[start_trade_date] = temp_total_data
-    # with open('total_data.pickle', 'wb') as file:
-    #     pickle.dump(total_data, file)
+        total_data[start_trade_date] = temp_total_data
+    with open('total_data.pickle', 'wb') as file:
+        pickle.dump(total_data, file)
 
 
 
