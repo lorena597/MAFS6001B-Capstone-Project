@@ -12,14 +12,14 @@ with open('total_data.pickle', 'rb') as file:
         total_data = pickle.load(file)
 
 params_range = {
-        'RSI': [list(range(3,20)), [10,20,30]],
-        'ADX': [list(range(2,10)), [30,40,50]],
-        'FR' : [list(range(1,30))],
-        'RHODL': [list(range(1,7))],
-        'CVDD': [list(range(1,24)), list(range(24,28))],
-        'NVTS': [list(range(1,90))],
-        'RUP': [list(range(1,24))],
-        'SSRO': [list(range(1,24))]
+        'RSI': [list(range(3,20,3)), [10,20,30]],
+        'ADX': [list(range(2,10,3)), [30,40,50]],
+        'FR' : [list(range(1,30,5))],
+        'RHODL': [list(range(1,7,3))],
+        'CVDD': [list(range(1,24,3)), list(range(24,28,3))],
+        'NVTS': [list(range(1,90,10))],
+        'RUP': [list(range(1,24,3))],
+        'SSRO': [list(range(1,24,3))]
 }
 
 strategy_list = list(params_range.keys())
