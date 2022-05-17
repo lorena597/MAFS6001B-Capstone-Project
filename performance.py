@@ -86,6 +86,6 @@ class PerformanceAnalysis(object):
         tail = self.df.tail(n).copy()
         plt.figure(figsize=(20, 10))
         plt.plot(tail.portfolio_value)
-        plt.plot(tail.loc[tail.entry_signal==1, ticker], marker='^', markersize=4, color='g', linestyle='None')
-        plt.plot(tail.loc[tail.exit_signal==1, ticker], marker='v', markersize=4, color='r', linestyle='None')
+        plt.plot(tail.loc[tail.entry_signal==1, tail.portfolio_value], marker='^', markersize=4, color='g', linestyle='None')
+        plt.plot(tail.loc[tail.exit_signal==1, tail.portfolio_value], marker='v', markersize=4, color='r', linestyle='None')
         plt.show()
