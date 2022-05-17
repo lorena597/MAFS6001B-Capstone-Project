@@ -100,7 +100,7 @@ class Total_portfolio():
 
         portfolio_returns = crypto_returns.values @ weight_c
         
-        self.portfolio_return_dict[optimizer_ix].extend(list(portfolio_returns))
+        self.portfolio_return_dict[optimizer_ix].extend(list(portfolio_returns)[1:])
   
     def forward(self, forward_data: dict, K: int) -> dict:
 
