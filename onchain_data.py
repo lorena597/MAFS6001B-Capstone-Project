@@ -13,9 +13,9 @@ def retrieve_onchain_data(required_metrics_list, start_time, end_time):
     for metrics in required_metrics_list:
         # make API request
         if metrics == 'gas_price':
-            res = requests.get(API + '/v1/metrics/fees/gas_price_mean', params={'a': 'ETH', 's': start_time, 'u': end_time, 'i': '1h', 'api_key': API_KEY})
+            res = requests.get(API + '/v1/metrics/fees/gas_price_mean', params={'a': 'ETH', 's': start_time, 'u': end_time+3600, 'i': '1h', 'api_key': API_KEY})
         else:
-            res = requests.get(API + '/v1/metrics/indicators/' + metrics, params={'a': 'BTC', 's': start_time, 'u': end_time, 'i': '24h', 'api_key': API_KEY})
+            res = requests.get(API + '/v1/metrics/indicators/' + metrics, params={'a': 'BTC', 's': start_time, 'u': end_time+3600, 'i': '24h', 'api_key': API_KEY})
         df = pd.read_json(res.text, convert_dates=['t'])
         df.rename(columns={'v': metrics}, inplace=True)
         df['t'] = df['t'].dt.tz_localize('UTC').dt.tz_convert('Asia/Hong_Kong').dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -24,12 +24,13 @@ def retrieve_onchain_data(required_metrics_list, start_time, end_time):
         result_df = pd.concat([result_df, df], axis=1, join='outer')
     result_df.iloc[0:25,:] = result_df.iloc[0:25,:].fillna(method='bfill')
     result_df.fillna(method='ffill', inplace=True)
-    result_df.iloc[:,-1] = result_df.iloc[:,-2]
+    result_df = result_df.iloc[:-1, :]
+
     return result_df
 
 
 if __name__ == '__main__':
     onchain_metrics_list = ['gas_price', 'rhodl_ratio', 'cvdd', 'nvts', 'unrealized_profit', 'ssr_oscillator']
     start_time = int(datetime.datetime(2020, 10, 23).timestamp())
-    end_time   = int(datetime.datetime(2022, 6, 30).timestamp())
+    end_time   = int(datetime.datetime(2021, 6, 30).timestamp())
     data = retrieve_onchain_data(onchain_metrics_list, start_time, end_time)
