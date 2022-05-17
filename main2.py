@@ -23,7 +23,7 @@ params_range = {
 }
 
 strategy_list = list(params_range.keys())
-selected_optimizer = [IVP, EWP, MVP, GMVP, MSRP, MDP, MDCP]
+selected_optimizer = [MSRP, MDCP]
 port = Total_portfolio(15, 10, strategy_list, params_range, selected_optimizer)
 res_dict = port.get_portfolio(total_data)
 print('end!')
