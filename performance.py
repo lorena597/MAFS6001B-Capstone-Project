@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 class PerformanceAnalysis(object): 
     
@@ -75,7 +76,7 @@ class PerformanceAnalysis(object):
         except:
             start_mdd = 0
         max_drawdown = max(np.maximum.accumulate(self.pnl) - self.pnl)/np.maximum.accumulate(self.pnl)[end_mdd]
-        ax3.plot(df.index, 100*self.pnl, label='Return')
+        ax3.plot(self.df.index, 100*self.pnl, label='Return')
         ax3.plot([end_mdd, start_mdd], [100*self.pnl.iloc[end_mdd], 100*self.pnl.iloc[start_mdd]], 'o', color='Red', markersize=10)
         ax3.set_ylabel('Cumulative Return (%)')
         ax3.legend(loc='best')
