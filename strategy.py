@@ -110,8 +110,8 @@ class Strategy(object):
     def ADX(self, window: int, benchmark_percent: int) -> pd.DataFrame:
         res = self.init_res()
 
-        adx = talib(self.high, self.low, self.close, timeperiod = window)
-        res.indicator = talib.DX(self.high, self.low, self.close, timeperiod = window)
+        adx = talib(self.df.high, self.df.low, self.df.close, timeperiod = window)
+        res.indicator = talib.DX(self.df.high, self.df.low, self.df.close, timeperiod = window)
         res.position = np.sign(res.indicator)*(adx > benchmark_percent)
         res = self.calculate_signal(res)
         return res
