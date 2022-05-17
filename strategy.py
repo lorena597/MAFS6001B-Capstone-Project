@@ -2,7 +2,7 @@ from turtle import reset
 import numpy as np
 import pandas as pd
 from sympy import N
-# import talib
+import talib
 
 class Strategy(object):
     
@@ -110,8 +110,8 @@ class Strategy(object):
     def ADX(self, window: int, benchmark_percent: int) -> pd.DataFrame:
         res = self.init_res()
 
-        adx = talib(self.df.high, self.df.low, self.df.close, timeperiod = window)
-        res.indicator = talib.DX(self.df.high, self.df.low, self.df.close, timeperiod = window)
+        adx = talib.ADX(np.array(self.df.high), np.array(self.df.low), np.array(self.df.close), timeperiod = window)
+        res.indicator = adx
         res.position = np.sign(res.indicator)*(adx > benchmark_percent)
         res = self.calculate_signal(res)
         return res
@@ -216,7 +216,7 @@ class Strategy(object):
     def ADOSC(self, fastperiod: int, slowperiod: int) -> pd.DataFrame:
         res = self.init_res()
 
-        adosc = talib.ADOSC(self.df.high, self.df.low, self.df.close, self.df.volume, fastperiod = fastperiod, slowperiod = slowperiod)
+        adosc = talib.ADOSC(np.array(self.df.high), np.array(self.df.low), np.array(self.df.close), np.array(self.df.volume), fastperiod = fastperiod, slowperiod = slowperiod)
         res.indicator = adosc
         res.position = np.sign(res.indicator)
         res = self.calculate_signal(res)
