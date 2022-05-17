@@ -55,6 +55,7 @@ def MSRP(mu, sigma):
 def IVP(mu, sigma):
     'Inverse Volatility Portfolio'
     inverse = 1 / np.sqrt(np.diag(sigma))
+    inverse[np.isnan(inverse)] = 0
     return inverse / np.nansum(inverse)
 
 def MDP(mu, sigma):
