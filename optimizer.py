@@ -10,12 +10,6 @@ Output:
     w: (1,n) array
 '''
 
-# # test
-# n = 10
-# np.random.seed(1)
-# mu = np.abs(np.random.randn(n,1))
-# sigma = np.random.randn(n,n)
-# sigma = sigma.T.dot(sigma)
 
 def EWP(mu, sigma):
     'Equal Weighted Portfolio'
@@ -48,7 +42,7 @@ def MSRP(mu, sigma):
     w_hat = cp.Variable(N)
     risk_hat = cp.quad_form(w_hat, sigma)
     ret_hat = mu.T @ w_hat
-    prob = cp.Problem(cp.Minimize(risk_hat), [ret_hat == 1])
+    prob = cp.Problem(cp.Minimize(risk_hat), [ret_hat == 1, w_hat >= 0])
     prob.solve()
     return w_hat.value / np.nansum(w_hat.value)
 
