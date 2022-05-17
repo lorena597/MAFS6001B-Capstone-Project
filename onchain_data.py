@@ -29,8 +29,8 @@ def retrieve_onchain_data(required_metrics_list, start_time, end_time):
     return result_df
 
 
-if __name__ == '__main__':
-    onchain_metrics_list = ['gas_price', 'rhodl_ratio', 'cvdd', 'nvts', 'unrealized_profit', 'ssr_oscillator']
-    start_time = int(datetime.datetime(2020, 10, 23).timestamp())
-    end_time   = int(datetime.datetime(2021, 6, 30).timestamp())
+# if __name__ == '__main__':
+#     onchain_metrics_list = ['gas_price', 'rhodl_ratio', 'cvdd', 'nvts', 'unrealized_profit', 'ssr_oscillator']
+#     start_time = int(datetime.datetime(2020, 10, 23).timestamp())
+#     end_time   = int(datetime.datetime(2021, 6, 30).timestamp())
     data = retrieve_onchain_data(onchain_metrics_list, start_time, end_time)
