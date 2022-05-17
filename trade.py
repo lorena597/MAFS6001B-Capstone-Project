@@ -85,6 +85,7 @@ class Trade(object):
         
         self.res['portfolio_return'] = self.portfolio_return_hist
         self.res['portfolio_value'] = self.portfolio_value_hist
+        self.res['position'] = self.position
         if self.trade_num > 0:
             self.winrate = self.win_trade_num / self.trade_num * 100
         return self.res
