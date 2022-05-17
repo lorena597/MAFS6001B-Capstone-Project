@@ -16,7 +16,7 @@ params_range = {
         'ADX': [list(range(2,10)), [30,40,50]],
         'FR' : [list(range(1,30))],
         'RHODL': [list(range(1,7))],
-        'CVDD': [list(range(1,30))],
+        'CVDD': [list(range(1,24)), list(range(24,28))],
         'NVTS': [list(range(1,90))],
         'RUP': [list(range(1,24))],
         'SSRO': [list(range(1,24))]
