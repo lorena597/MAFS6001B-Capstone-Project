@@ -12,6 +12,8 @@ with open('total_data.pickle', 'rb') as file:
         total_data = pickle.load(file)
 
 params_range = {
+        'crossover': [list(range(50,100,10)), list(range(100,150,10))],
+        'channelbreakout': [list(range(40,140,10)), [1.5,2,2.5]],
         'RSI': [list(range(3,20,3)), [10,20,30]],
         'ADX': [list(range(2,10,3)), [30,40,50]],
         'FR' : [list(range(1,30,5))],
