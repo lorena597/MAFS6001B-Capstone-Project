@@ -82,10 +82,15 @@ class Total_portfolio():
             try:
                 weight_s = selected_optimizer(mu_s, sigma_s)
             except:
-                weight_s = EWP(mu_s, sigma_s)
-
-            crypto_returns[k] = strats_returns.values @ weight_s
-
+                weight_s = EWP(mu_s, sigma_s)   
+            
+            try:
+                crypto_returns[k] = strats_returns.values @ weight_s
+            except:
+                temp_return = np.zeros(len(crypto_returns))
+                temp_return[:len(strats_returns)] = strats_returns.values @ weight_s
+                crypto_returns[k] = temp_return
+            
         mu_c = crypto_returns.mean().values.reshape((-1,1))
         sigma_c = crypto_returns.cov().values
         try:
