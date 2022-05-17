@@ -11,7 +11,7 @@ class PerformanceAnalysis(object):
         self.pnl = self.df.portfolio_value
         self.ret = self.df.portfolio_return
         self.winrate = winrate
-
+        
     @property
     def ann_ret(self):
         '''annual return'''
@@ -67,7 +67,7 @@ class PerformanceAnalysis(object):
             ax1.plot(self.df.index, self.df.loc[:, column], label=column)
         ax1.legend(loc='best')
         # Trading Position
-        ax2.plot(self.df.index, self.df.loc[:, 'trading_position'], label='Trading position')
+        ax2.plot(self.df.index, self.df.position, label='Trading position')
         ax2.set_ylabel('Trading Position')
         # Return & Drawdown
         end_mdd = np.argmax(np.maximum.accumulate(self.pnl) - self.pnl) # end of the period
@@ -82,10 +82,10 @@ class PerformanceAnalysis(object):
         ax3.legend(loc='best')
         ax3.set_title('Max Drawdown: '+ str(self.df.index.iloc[start_mdd]) + ' ~ ' + str(self.df.index.iloc[end_mdd])+' (-'+str(round((max_drawdown*100),2))+'%)', y=-0.01);
         
-    def plot_signals(self, ticker='BTC', n=2000):
+    def plot_signals(self, n=2000):
         tail = self.df.tail(n).copy()
         plt.figure(figsize=(20, 10))
-        plt.plot(tail.loc[:, ticker])
-        plt.plot(tail.loc[tail['signal']==1, 'close'], marker='^', markersize=4, color='g', linestyle='None')
-        plt.plot(tail.loc[tail['signal']==-1, 'close'], marker='v', markersize=4, color='r', linestyle='None')
+        plt.plot(tail.portfolio_value)
+        plt.plot(tail.loc[tail.entry_signal==1, ticker], marker='^', markersize=4, color='g', linestyle='None')
+        plt.plot(tail.loc[tail.exit_signal==1, ticker], marker='v', markersize=4, color='r', linestyle='None')
         plt.show()
