@@ -4,6 +4,7 @@ import pickle
 import glob
 from datetime import datetime, timedelta
 from retrieve_data import *
+from onchain_data import retrieve_onchain_data
 
 def generate_coin_list():
     csvfiles = []
@@ -48,7 +49,7 @@ def update_coin_list(backtest_time, trade_period, coin_dict):
 
 
 
-def fetch_data(coin_dict, buffer_period, train_period, trade_period):
+def fetch_data(coin_dict, buffer_period, train_period, trade_period, onchain_metrics_list):
     total_data = dict()
     for start_trade_date in list(coin_dict.keys()):
         start_trade_date_ = datetime.strptime(start_trade_date, '%Y-%m-%d %H:%M:%S')
@@ -62,24 +63,28 @@ def fetch_data(coin_dict, buffer_period, train_period, trade_period):
         temp_coin_list = coin_dict[start_trade_date]
         temp_total_data = dict()
         print(start_time)
+        on_chain_data = retrieve_onchain_data(onchain_metrics_list, int(start_time), int(end_time))
         for i in range(len(temp_coin_list)):
             print(temp_coin_list[i])
             try:
                 temp_data = Future(temp_coin_list[i], resolution=3600).get_candlesticks(start_time, end_time)
+                
+                temp_data = temp_data.merge(on_chain_data, how = 'left', right_index = True, left_index = True)
                 print(temp_data)
                 temp_total_data[temp_coin_list[i]] = temp_data
             except:
                 print('error!')
             
             
-        total_data[start_trade_date] = temp_total_data
-    with open('total_data.pickle', 'wb') as file:
-        pickle.dump(total_data, file)
+    #     total_data[start_trade_date] = temp_total_data
+    # with open('total_data.pickle', 'wb') as file:
+    #     pickle.dump(total_data, file)
 
 
 
 if __name__ == '__main__':
-    backtest_start_time = '2020-05-01'
+    onchain_metrics_list = ['gas_price', 'rhodl_ratio', 'cvdd', 'nvts', 'unrealized_profit', 'ssr_oscillator']
+    backtest_start_time = '2021-05-01'
     backtest_end_time = '2022-05-01'
     backtest_time = pd.date_range(backtest_start_time, backtest_end_time, freq = 'H').strftime('%Y-%m-%d %H:%M:%S')
 
@@ -89,4 +94,4 @@ if __name__ == '__main__':
     with open('coin_list', 'rb') as file:
         coin_dict = pickle.load(file)
     coin_dict = update_coin_list(backtest_time, trade_period, coin_dict)
-    fetch_data(coin_dict, buffer_period, train_period, trade_period)
+    fetch_data(coin_dict, buffer_period, train_period, trade_period, onchain_metrics_list)
